@@ -1479,7 +1479,7 @@ static const char *__pyx_filename;
 /* #### Code section: filename_table ### */
 
 static const char *__pyx_f[] = {
-  "gtfspy/routing/label.pyx",
+  "gtfspy\\\\routing\\\\label.pyx",
   "<stringsource>",
 };
 /* #### Code section: utility_code_proto_before_types ### */
@@ -2961,7 +2961,7 @@ static const char __pyx_k_min_arrival_time_target[] = "min_arrival_time_target";
 static const char __pyx_k_LabelTimeSimple_duration[] = "LabelTimeSimple.duration";
 static const char __pyx_k_LabelTimeSimple_get_copy[] = "LabelTimeSimple.get_copy";
 static const char __pyx_k_get_copy_with_walk_added[] = "get_copy_with_walk_added";
-static const char __pyx_k_gtfspy_routing_label_pyx[] = "gtfspy/routing/label.pyx";
+static const char __pyx_k_gtfspy_routing_label_pyx[] = "gtfspy\\routing\\label.pyx";
 static const char __pyx_k_LabelTimeSimple_dominates[] = "LabelTimeSimple.dominates";
 static const char __pyx_k_LabelTime___reduce_cython[] = "LabelTime.__reduce_cython__";
 static const char __pyx_k_LabelVehLegCount_get_copy[] = "LabelVehLegCount.get_copy";

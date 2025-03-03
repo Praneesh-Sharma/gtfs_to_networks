@@ -29,6 +29,7 @@ gtfspy.egg-info/SOURCES.txt
 gtfspy.egg-info/dependency_links.txt
 gtfspy.egg-info/requires.txt
 gtfspy.egg-info/top_level.txt
+gtfspy/routing/label.pyx
 gtfspy/import_loaders/__init__.py
 gtfspy/import_loaders/agency_loader.py
 gtfspy/import_loaders/calendar_dates_loader.py
