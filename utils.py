@@ -509,9 +509,9 @@ def manual_merge(G,
 
             return p
 
-        bt = Button(label='Merge nodes')
-        
+        bt = Button(label='Merge nodes')        
         #bt2 = Button(label='Delete edge')
+        bt3= Button(label='Delete nodes')
 
         def change_click():
             #Get selected stops
@@ -550,11 +550,25 @@ def manual_merge(G,
             else:
                 print("Select two nodes to delete an edge")
                 
+        def delete_nodes():
+            #Get selected stops
+            indices = graph.node_renderer.data_source.selected.indices
+            if len(indices)==1:
+                n1=graph.node_renderer.data_source.data["index"][indices[0]]
+                name_n1=graph.node_renderer.data_source.data["name"][indices[0]]
+                G.remove_node(n1)
+                print("Deleted node %s"%name_n1)
+                p = figure(tools="reset,pan,wheel_zoom,lasso_select")
+                layout.children[0] = create_figure()
+            else:
+                print("Select one node to delete")
+                
         bt.on_click(change_click)
         #bt2.on_click(delete_edge)
+        bt3.on_click(delete_nodes)
 
         #layout=column(create_figure(),bt, bt2)
-        layout=column(create_figure(),bt)
+        layout=column(create_figure(),bt, bt3)
 
         doc.add_root(layout)
 
