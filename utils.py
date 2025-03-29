@@ -14,7 +14,7 @@ from bokeh.models import (CDSView, ColorBar, ColumnDataSource,
                           GeoJSONDataSource, HoverTool,
                           LinearColorMapper, Slider, Circle, 
                           MultiLine, WheelZoomTool,GMapOptions, 
-                          Range1d, Button, NodesAndLinkedEdges, EdgesAndLinkedNodes,
+                          DataRange1d, Button, NodesAndLinkedEdges, EdgesAndLinkedNodes,
                           ColorBar)
 from bokeh.layouts import column, row,layout
 
@@ -510,7 +510,7 @@ def manual_merge(G,
             return p
 
         bt = Button(label='Merge nodes')        
-        #bt2 = Button(label='Delete edge')
+        bt2 = Button(label='Delete edge')
         bt3= Button(label='Delete nodes')
 
         def change_click():
@@ -555,7 +555,7 @@ def manual_merge(G,
             indices = graph.node_renderer.data_source.selected.indices
             if len(indices)==1:
                 n1=graph.node_renderer.data_source.data["index"][indices[0]]
-                name_n1=graph.node_renderer.data_source.data["name"][indices[0]]
+                name_n1=graph.node_renderer.data_source.data["name"][indices[0] ]
                 G.remove_node(n1)
                 print("Deleted node %s"%name_n1)
                 p = figure(tools="reset,pan,wheel_zoom,lasso_select")
@@ -564,16 +564,285 @@ def manual_merge(G,
                 print("Select one node to delete")
                 
         bt.on_click(change_click)
-        #bt2.on_click(delete_edge)
+        bt2.on_click(delete_edge)
         bt3.on_click(delete_nodes)
 
         #layout=column(create_figure(),bt, bt2)
-        layout=column(create_figure(),bt, bt3)
+        layout=column(create_figure(),bt, bt3, bt2)
 
         doc.add_root(layout)
 
     show(bkapp,
          notebook_url=jupyter_url)
+
+#######################################################3
+    
+def merge_edges(G,edges):
+
+    if edges==[]:
+        print ("Select edges first!")
+        return None
+    
+    #First edge is intercity
+    ic1=edges[0]
+    ic2=(edges[0][1],edges[0][0])
+
+    #Get all other edges (sprinters)
+    spr=[]
+    for e in edges[1:]:
+        spr.append(e)
+        spr.append((e[1],e[0]))
+
+    #Remove duplicates
+    spr=list(set(spr)-set([ic1,ic2]))
+
+    #Check all edges in graph
+    for e in spr+[ic1,ic2]:
+        if e not in G.edges():
+            print("Error: edge (%d,%d) not in Graph"%(e[0],e[1]))
+            return None
+
+    if spr==[]:
+        print ("Error: no sprinter lines selected")
+        return None
+
+    #Get ic1 edges
+    visited_nodes=[ic1[0]]
+    spr_ic1=[]
+    node=ic1[0]
+    #print(ic1)
+    #print(spr)
+    #return None
+    while node!=ic1[1] or len(visited_nodes)==100:
+        aux=[e for e in spr if e[0]==node and e[1] not in visited_nodes and e!=ic2 and e!=ic1]
+        if aux==[]:
+            print("Error. The selected edges are not connected, check: %s"%edges)
+            return None
+        edge=aux[0]
+        spr_ic1.append(edge)
+        visited_nodes.append(edge[1])
+        node=edge[1]
+
+    if len(visited_nodes)==100:
+        print("Error. Check the list of selected edges: %s"%edges)
+        return None
+
+    #print(ic1)
+    #print(spr_ic1)
+
+    #Get ic2 edges
+    visited_nodes=[ic2[0]]
+    spr_ic2=[]
+    node=ic2[0]
+    while node!=ic2[1] or len(visited_nodes)==100:
+        aux=[e for e in spr if e[0]==node and e[1] not in visited_nodes and e!=ic1 and e!=ic2]
+        if aux==[]:
+            print("Error. The selected edges are not connected, check: %s"%edges)
+            return None
+        edge=aux[0]
+        spr_ic2.append(edge)
+        visited_nodes.append(edge[1])
+        node=edge[1]
+
+    if len(visited_nodes)==100:
+        print("Error. Check the list of selected edges: %s"%edges)
+        return None
+
+    #print("---")
+    #print(ic2)
+    #print(spr_ic2)
+    #Merge IC1
+    data_ic1=G[ic1[0]][ic1[1]]
+    sum_times=sum([G[e[0]][e[1]]["duration_avg"] for e in spr_ic1])
+    for e in spr_ic1:
+
+        #Get proportion of IC time assigned to that edge
+        data_e=G[e[0]][e[1]]
+        prop_ic=data_ic1["duration_avg"]*(data_e["duration_avg"]/sum_times)
+
+        #Weight the time based on frequency
+        data_e["duration_avg"]=(data_e["duration_avg"]*data_e["n_vehicles"]+prop_ic*data_ic1["n_vehicles"])/(data_e["n_vehicles"]+data_ic1["n_vehicles"])
+
+        #Update n_vehicles
+        data_e["n_vehicles"]+=data_ic1["n_vehicles"]
+        data_e["route_I_counts"]={k: data_e["route_I_counts"].get(k, 0) + data_ic1["route_I_counts"].get(k, 0) for k in set(data_e["route_I_counts"]) | set(data_ic1["route_I_counts"])}
+        data_e["direction_id"]={k: data_e["direction_id"].get(k, 0) + data_ic1["direction_id"].get(k, 0) for k in set(data_e["direction_id"]) | set(data_ic1["direction_id"])}
+        data_e["shape_id"]={k: data_e["shape_id"].get(k, 0) + data_ic1["shape_id"].get(k, 0) for k in set(data_e["shape_id"]) | set(data_ic1["shape_id"])}
+        data_e["headsign"]={k: data_e["headsign"].get(k, 0) + data_ic1["headsign"].get(k, 0) for k in set(data_e["headsign"]) | set(data_ic1["headsign"])}
+        
+        #Keep log of merged edges
+        if "merged_ic_edges" not in data_e:
+            data_e["merged_ic_edges"]=[]
+        data_e["merged_ic_edges"].append(ic1)
+
+    
+    G.remove_edge(ic1[0],ic1[1])
+    print("Merged %s into %s"%(ic1,spr_ic1))
+
+    #Merge IC2
+    data_ic2=G[ic2[0]][ic2[1]]
+    sum_times=sum([G[e[0]][e[1]]["duration_avg"] for e in spr_ic2])
+    for e in spr_ic2:
+
+        #Get proportion of IC time assigned to that edge
+        data_e=G[e[0]][e[1]]
+        prop_ic=data_ic2["duration_avg"]*(data_e["duration_avg"]/sum_times)
+
+        #Weight the time based on frequency
+        data_e["duration_avg"]=(data_e["duration_avg"]*data_e["n_vehicles"]+prop_ic*data_ic2["n_vehicles"])/(data_e["n_vehicles"]+data_ic2["n_vehicles"])
+
+        #Update n_vehicles
+        data_e["n_vehicles"]+=data_ic2["n_vehicles"]
+        data_e["route_I_counts"]={k: data_e["route_I_counts"].get(k, 0) + data_ic2["route_I_counts"].get(k, 0) for k in set(data_e["route_I_counts"]) | set(data_ic2["route_I_counts"])}
+        data_e["direction_id"]={k: data_e["direction_id"].get(k, 0) + data_ic2["direction_id"].get(k, 0) for k in set(data_e["direction_id"]) | set(data_ic2["direction_id"])}
+        data_e["shape_id"]={k: data_e["shape_id"].get(k, 0) + data_ic2["shape_id"].get(k, 0) for k in set(data_e["shape_id"]) | set(data_ic2["shape_id"])}
+        data_e["headsign"]={k: data_e["headsign"].get(k, 0) + data_ic2["headsign"].get(k, 0) for k in set(data_e["headsign"]) | set(data_ic2["headsign"])}
+        
+        #Keep log of merged edges
+        if "merged_ic_edges" not in data_e:
+            data_e["merged_ic_edges"]=[]
+        data_e["merged_ic_edges"].append(ic2)
+
+    G.remove_edge(ic2[0],ic2[1])
+    print("Merged %s into %s"%(ic2,spr_ic2))        
+
+def edge_merger(G,
+                 jupyter_url="http://localhost:8888"):
+    def bkapp(doc):    
+        #Build dictionary of node positions for visualizations
+        pos_dict={}
+        for i,d in G.nodes(data=True):
+            pos_dict[int(i)]=(float(d["lon"]),float(d["lat"]))
+
+
+        def update_range(axis,endpoint,value):
+            if axis=="x":
+                if endpoint=="start":
+                    global x_range_start
+                    x_range_start=value
+                elif endpoint=="end":
+                    global x_range_end
+                    x_range_end=value
+            elif axis=="y":
+                if endpoint=="start":
+                    global y_range_start
+                    y_range_start=value
+                elif endpoint=="end":
+                    global y_range_end
+                    y_range_end=value
+            
+        global x_range_start
+        x_range_start=None
+        global x_range_end
+        x_range_end=None
+        global y_range_start
+        y_range_start=None
+        global y_range_end
+        y_range_end=None
+            
+        # source
+        global graph
+        graph = from_networkx(G, layout_function=pos_dict)
+
+        def create_figure():
+            back_map=False
+
+            if back_map:
+                map_options = GMapOptions(lat=list(G.nodes(data=True))[0][1]["lat"], 
+                                          lng=list(G.nodes(data=True))[0][1]["lon"], 
+                                          map_type="roadmap", 
+                                          zoom=11)
+                p = gmap(MAPS_API_KEY, map_options)
+            elif not x_range_start:
+                p = figure(height = 600 ,
+                           width = 950,
+                           toolbar_location = 'below',
+                           tools = "pan, tap, wheel_zoom, box_zoom, box_select, reset, save")
+            else:
+                p = figure(height = 600 ,
+                           width = 950,
+                           toolbar_location = 'below',
+                           tools = "pan, tap, wheel_zoom, box_zoom, box_select, reset, save",
+                           x_range=DataRange1d(start=x_range_start,end=x_range_end),
+                           y_range=DataRange1d(start=y_range_start,end=y_range_end))
+                
+
+            #Zoom is active by default    
+            p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+
+            # Plot updated graph
+            global graph
+            
+            #Build dictionary of node positions for visualizations
+            pos_dict_2={}
+            for i,d in G.nodes(data=True):
+                pos_dict_2[int(i)]=(float(d["lon"]),float(d["lat"]))
+            
+            graph = from_networkx(G, layout_function=pos_dict_2)
+
+            #Hover tool
+            node_hover_tool = HoverTool(tooltips=[("index", "@index"),
+                                                  ("name", "@name")],
+                                       renderers=[graph.node_renderer])
+
+            p.add_tools(node_hover_tool)
+
+            hover_edges = HoverTool(tooltips=[("duration_avg", "@duration_avg"),
+                                              ("n_vehicles","@n_vehicles"),
+                                              ("merged_ic_edges","@merged_ic_edges")],
+                            renderers=[graph.edge_renderer],
+                           line_policy="interp")
+
+            p.add_tools(hover_edges)
+            
+            #Formatting
+            graph.node_renderer.selection_glyph = Circle(fill_color="red")
+            graph.node_renderer.glyph = Circle(size=8)
+            graph.edge_renderer.selection_glyph = MultiLine(line_width=2,line_color="red")
+            graph.edge_renderer.glyph = MultiLine(line_width=2)
+
+
+            graph.selection_policy = EdgesAndLinkedNodes() #NodesAndLinkedEdges()
+            p.renderers.append(graph)
+
+            p.x_range.on_change('start', lambda attr, old, new: update_range("x","start",new))
+            p.x_range.on_change('end', lambda attr, old, new: update_range("x","end",new))
+            p.y_range.on_change('start', lambda attr, old, new: update_range("y","start",new))
+            p.y_range.on_change('end', lambda attr, old, new: update_range("y","end",new))
+
+            return p
+
+        bt = Button(label='Combine edges')
+        
+        #bt2 = Button(label='Delete edge')
+
+        def change_click():
+            edges=[]
+            #Get selected stops
+            indices = graph.edge_renderer.data_source.selected.indices
+            for i in indices:
+                start=graph.edge_renderer.data_source.data["start"][i]
+                end=graph.edge_renderer.data_source.data["end"][i]
+                edges.append((start,end))
+            merge_edges(G,edges)
+            p = figure(tools="reset,pan,wheel_zoom,lasso_select")
+            layout.children[0] = create_figure()
+            return p
+
+        bt.on_click(change_click)
+
+        layout=column(create_figure(),bt)
+
+        doc.add_root(layout)
+
+    show(bkapp,
+         notebook_url=jupyter_url)
+
+
+
+###############
+
+
 
 def sanity_check(G):
     print("Checking self loops...")
