@@ -1,40 +1,93 @@
-# Public Transport Network graph modelling using GTFS data
+# Public Transport Network Graph Modelling using GTFS Data
 
-For any questions regarding this software contact Renzo Massobrio (renzo.massobrio@uantwerpen.be)
+This repository provides tools for processing GTFS (General Transit Feed Specification) data to model public transport networks as graphs. It includes notebooks for parsing, cleaning, and analyzing GTFS data, with support for multiple cities. Our code focuses on the Belgian data, particularly rail lines. There is also some work on the Chicago data (provided by Dr. Renzo Massobrio (renzo.massobrio@uantwerpen.be)), which we took as a reference to while working on the Belgian data.
 
-----
+---
 
-## Installation
+## 🛠 Installation
 
-If you want to run the code locally in your computer, you need to follow these instructions.
+Follow these steps to set up the project locally.  
+**Note:** macOS is not supported.
 
-**Support for macOS is not provided.**
+### 1. Install Miniconda
 
-1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html). 
+Download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
-2. Install dependencies:
-    - **Only for Windows users**. Download the latest Microsoft Visual C++ Build Tools: 
-       * You can download it from [here](https://visualstudio.microsoft.com/downloads/). 
-       * In the installation options select "Desktop Development with C++". 
-    - **Only for Linux users**. You need GCC compiler (in Ubuntu, install it with `sudo apt install build-essential`)
-3. Create the conda environment that installs all the necessary dependencies
+### 2. Install Build Tools
 
-   - Open Anaconda Prompt (in Windows) or a terminal (Linux).
+Depending on your OS:
 
-   - Move into the directory where this README file is located.
-   
-       * Windows: use `cd` to move to the target directory. For example, `cd C:\Users\user\Documents\repo-main`. If you have many disk partitions, you need to first move to the partition where the file is located, for example, 'D:' and then `cd D:\Documents\repo-main`.
-   	
-       * Linux: use the command `cd` in the terminal (e.g., `cd /home/user/repo-main`)
-        
-   - Run the following command: `conda env create -f environment.yml` 
-   
-4. Run the Jupyter notebook
-   - Activate the newly created environment with the following command: `conda activate pt-networks`
-   - Start a new jupyter instance with the following command: `jupyter notebook`
-   - A new window will open in your web browser. Select the file notebook.ipynb from the list and start working on your networks :)
-----
+- **Windows:**  
+  Download and install the **Microsoft Visual C++ Build Tools**:  
+  [Visual Studio Downloads](https://visualstudio.microsoft.com/downloads/)  
+  During installation, select **"Desktop Development with C++"**.
 
-## Using the code
+- **Linux:**  
+  Install the GCC compiler:  
+  ```bash
+  sudo apt install build-essential
+  ```
+### 3. Set Up the Conda Environment
+Open Anaconda Prompt (Windows) or a terminal (Linux) and navigate to the project directory:
 
-You can find a video tutorial on how to use this tool [here](https://surfdrive.surf.nl/files/index.php/s/Td4xD7GIDDefniP)
+- **Windows:**
+  ```bash
+  D:
+  cd Documents\GTFS_TO_NETWORK
+  ```
+- **Linux:**
+  ```bash
+  cd /path/to/repo
+  ```
+
+Create the environment using:
+```bash
+conda env create -f environment.yml
+```
+
+### 4. Run the Jupyter Notebook
+Activate the environment and start Jupyter:
+```bash
+conda activate pt-networks
+jupyter notebook
+```
+In your browser, select a notebook from the list (e.g., Belgium Railways.ipynb) to begin your analysis.
+
+## 📁 Project Structure
+```python
+GTFS_TO_NETWORK/
+│
+├── data/
+│   ├── belgium/ # Unzipped GTFS files (consists of various txt files)
+│   ├── belgium.zip # Raw GTFS data downloaded from the web for Belgium
+│   └── gtfs_chicago.zip # Raw GTFS data downloaded from the web for Chicago
+│
+├── graphs/ # Consists of images of the graph at various stages of cleaning
+│
+├── gtfspy-master/ # Contains the GTFS processing library (GTFS-Spy) used for parsing and analyzing transit data.
+│
+├── notebooks/
+│   ├── Belgium Railways.ipynb # Main notebook for working on the Belgian Data
+│   ├── CheckNodes&Routes.ipynb # Notebook to check, visualize and analyze the L-Graph
+│   ├── Chicago.ipynb # Main notebook for working on the Chicago Data
+│   ├── DeleteNodes&Routes.ipynb # Notebook focussing on cleaning the L-Graph by deleting unwanted nodes and routes
+│   ├── MergeRoutes.ipynb # Notebook which merges direct routes with the actual path. 
+│   └── P-Space.ipynb # Notebook to work on the P-Graph being generated from the cleaned L-Graph
+│
+├── osmread-master/ # Includes the OSM (OpenStreetMap) reading utility for handling geographic data.
+│
+├── pkl/
+│   ├── belgium_nodesCleaned.pkl # L-Graph after cleaning the nodes
+│   ├── belgium_routesCleaned.pkl # # L-Graph after cleaning the routes after the nodes
+│   ├── belgium.pkl # Original L-Graph
+│   └── chicago.pkl # Original L-Graph
+│
+├── sqlite/
+│   ├── belgium.sqlite 
+│   └── chicago.sqlite
+│
+├── .gitignore
+├── environment.yml
+├── README.md
+└── utils.py # Important functions for our work
+```
