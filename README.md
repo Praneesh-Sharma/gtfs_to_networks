@@ -79,6 +79,7 @@ GTFS_TO_NETWORK/
 ├── pkl/
 │   ├── belgium_nodesCleaned.pkl # L-Graph after cleaning the nodes
 │   ├── belgium_routesCleaned.pkl # # L-Graph after cleaning the routes after the nodes
+│   ├── belgium_P.pkl # P-Graph
 │   ├── belgium.pkl # Original L-Graph
 │   └── chicago.pkl # Original L-Graph
 │
